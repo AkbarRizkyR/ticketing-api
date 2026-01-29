@@ -6,13 +6,14 @@ import java.util.Set;
 
 public class CreateUserDto {
 
-    @NotBlank
+    @NotBlank(message = "Nama wajib diisi")
     public String fullName;
 
-    @Email
+    @NotBlank(message = "Email wajib diisi")
+    @Email(message = "Format email tidak valid")
     public String email;
 
-    @NotBlank
+    @NotBlank(message = "Password wajib diisi")
     public String password;
 
     public Set<Long> roleIds;

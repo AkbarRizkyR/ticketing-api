@@ -3,6 +3,7 @@ package io.github.akbarrizky.resource.user;
 import io.github.akbarrizky.dto.user.CreateUserDto;
 import io.github.akbarrizky.dto.user.UserDto;
 import io.github.akbarrizky.service.user.UserService;
+import io.github.akbarrizky.util.ApiResponse;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -20,7 +21,7 @@ public class UserResource {
     @POST
     public Response create(@Valid CreateUserDto dto) {
         UserDto result = userService.create(dto);
-        return Response.status(Response.Status.CREATED).entity(result).build();
+        return Response.ok(ApiResponse.success(result)).build();
     }
 
     @GET
