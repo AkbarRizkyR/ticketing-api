@@ -1,0 +1,63 @@
+package io.github.akbarrizky.entity.tiket;
+
+import io.github.akbarrizky.entity.user.User;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "tickets")
+public class Ticket {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long id;
+
+    @Column(name = "ticket_code", length = 20)
+    public String ticketCode;
+
+    @Column(length = 255)
+    public String title;
+
+    @Column(length = 2000)
+    public String description;
+
+    // RELASI KE MASTER
+    @ManyToOne
+    @JoinColumn(name = "priority_id")
+    public TicketPriority priority;
+
+    @Column(name = "priority")
+    public String priorityName;
+
+    @ManyToOne
+    @JoinColumn(name = "status_id")
+    public TicketStatus status;
+
+    @Column(name = "status")
+    public String statusName;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    public TicketCategory category;
+
+    // Skipping categoryName mapped to "category" column because previous error
+    // indicated it is BIGINT.
+    // @Column(name = "category")
+    // public String categoryName;
+
+    // RELASI USER
+
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    public User createdBy;
+
+    @ManyToOne
+    @JoinColumn(name = "assigned_to")
+    public User assignedTo;
+
+    @Column(name = "created_at")
+    public LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    public LocalDateTime updatedAt;
+}

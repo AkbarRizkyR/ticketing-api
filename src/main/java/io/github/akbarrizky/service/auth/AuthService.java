@@ -4,6 +4,7 @@ import io.github.akbarrizky.dto.auth.LoginDto;
 import io.github.akbarrizky.entity.user.User;
 import io.github.akbarrizky.exception.UnauthorizedException;
 import io.github.akbarrizky.repository.user.UserRepository;
+import io.github.akbarrizky.util.JwtUtil;
 import io.github.akbarrizky.util.PasswordUtil;
 import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,6 +19,7 @@ public class AuthService {
     public String generateToken(Long userId, String email, Set<String> roles) {
         return Jwt.issuer("ticketing-api")
                 .subject(userId.toString())
+                .claim("userId", userId)
                 .upn(email)
                 .groups(roles)
                 .expiresIn(Duration.ofHours(2))
@@ -26,6 +28,9 @@ public class AuthService {
 
     @Inject
     UserRepository userRepository;
+
+    @Inject
+    JwtUtil jwtUtil;
 
     public String login(LoginDto dto) {
 

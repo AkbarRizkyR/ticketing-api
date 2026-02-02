@@ -4,6 +4,7 @@ import io.github.akbarrizky.dto.user.CreateUserDto;
 import io.github.akbarrizky.dto.user.UserDto;
 import io.github.akbarrizky.service.user.UserService;
 import io.github.akbarrizky.util.ApiResponse;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -25,6 +26,7 @@ public class UserResource {
     }
 
     @GET
+    @RolesAllowed("ADMIN")
     @Path("/{id}")
     public UserDto get(@PathParam("id") Long id) {
         return userService.getById(id);
