@@ -4,6 +4,9 @@ import io.github.akbarrizky.entity.user.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
 @Table(name = "tickets")
 public class Ticket {
@@ -40,24 +43,34 @@ public class Ticket {
     @JoinColumn(name = "category_id")
     public TicketCategory category;
 
-    // Skipping categoryName mapped to "category" column because previous error
-    // indicated it is BIGINT.
-    // @Column(name = "category")
-    // public String categoryName;
+    @Column(name = "category")
+    public String categoryName;
 
     // RELASI USER
 
-    @ManyToOne
-    @JoinColumn(name = "created_by")
-    public User createdBy;
+    @Column(name = "created_by", length = 100)
+    public String createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    public LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    public LocalDateTime updatedAt;
 
     @ManyToOne
     @JoinColumn(name = "assigned_to")
     public User assignedTo;
 
-    @Column(name = "created_at")
-    public LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "assigned_name")
+    public String assignedName;
 
-    @Column(name = "updated_at")
-    public LocalDateTime updatedAt;
+    @ManyToOne
+    @JoinColumn(name = "reported_id")
+    public User reportedBy;
+
+    @Column(name = "reported_name")
+    public String reportedName;
+
 }

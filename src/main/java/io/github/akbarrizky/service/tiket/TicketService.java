@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import io.github.akbarrizky.dto.tiket.CreateTicketDto;
 import io.github.akbarrizky.dto.tiket.TicketDto;
+import io.github.akbarrizky.dto.tiket.UpdateTicketDto;
 import io.github.akbarrizky.entity.tiket.Ticket;
 import io.github.akbarrizky.entity.tiket.TicketCategory;
 import io.github.akbarrizky.entity.tiket.TicketPriority;
@@ -12,6 +13,7 @@ import io.github.akbarrizky.entity.user.User;
 import io.github.akbarrizky.exception.NotFoundException;
 import io.github.akbarrizky.repository.tiket.TicketRepository;
 import io.github.akbarrizky.repository.user.UserRepository;
+import io.github.akbarrizky.util.DateUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import io.github.akbarrizky.repository.tiket.TicketCategoryRepository;
 import io.github.akbarrizky.repository.tiket.TicketPriorityRepository;
@@ -22,97 +24,169 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class TicketService {
 
-    @Inject
-    TicketRepository ticketRepository;
+        @Inject
+        TicketRepository ticketRepository;
 
-    @Inject
-    UserRepository userRepository;
+        @Inject
+        UserRepository userRepository;
 
-    @Inject
-    TicketPriorityRepository priorityRepository;
+        @Inject
+        TicketPriorityRepository priorityRepository;
 
-    @Inject
-    TicketStatusRepository statusRepository;
+        @Inject
+        TicketStatusRepository statusRepository;
 
-    @Inject
-    TicketCategoryRepository categoryRepository;
+        @Inject
+        TicketCategoryRepository categoryRepository;
 
-    @Transactional
-    public TicketDto create(CreateTicketDto dto, Long userId) {
+        @Transactional
+        public TicketDto create(CreateTicketDto dto, Long userId) {
 
-        User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
+                User user = userRepository.findByIdOptional(userId)
+                                .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
 
-        TicketPriority priority = priorityRepository.findByIdOptional(dto.priorityId)
-                .orElseThrow(() -> new NotFoundException("Priority tidak ditemukan"));
+                TicketPriority priority = priorityRepository.findByIdOptional(dto.priorityId)
+                                .orElseThrow(() -> new NotFoundException("Priority tidak ditemukan"));
 
-        TicketStatus status = statusRepository.findByIdOptional(dto.statusId)
-                .orElseThrow(() -> new NotFoundException("Status tidak ditemukan"));
+                TicketStatus status = statusRepository.findByIdOptional(dto.statusId)
+                                .orElseThrow(() -> new NotFoundException("Status tidak ditemukan"));
 
-        TicketCategory category = categoryRepository.findByIdOptional(dto.categoryId)
-                .orElseThrow(() -> new NotFoundException("Category tidak ditemukan"));
+                TicketCategory category = categoryRepository.findByIdOptional(dto.categoryId)
+                                .orElseThrow(() -> new NotFoundException("Category tidak ditemukan"));
 
-        Ticket ticket = new Ticket();
+                Ticket ticket = new Ticket();
 
-        ticket.title = dto.title;
-        ticket.description = dto.description;
+                ticket.title = dto.title;
+                ticket.description = dto.description;
 
-        ticket.priority = priority;
-        ticket.priorityName = priority.name;
+                ticket.priority = priority;
+                ticket.priorityName = priority.name;
 
-        ticket.status = status;
-        ticket.statusName = status.name;
+                ticket.status = status;
+                ticket.statusName = status.name;
 
-        ticket.category = category;
-        // ticket.categoryName = category.name; // Skipped
+                ticket.category = category;
+                ticket.categoryName = category.name;
 
-        ticket.createdBy = user;
+                ticket.createdBy = user.fullName;
 
-        // Generate Ticket Code (TCK-{timestamp}) - total < 20 chars
-        // System.currentTimeMillis() is 13 digits. TCK- + 13 = 17 chars.
-        ticket.ticketCode = "TCK-" + System.currentTimeMillis();
+                ticket.ticketCode = "TCK-" + System.currentTimeMillis();
 
-        ticketRepository.persist(ticket);
+                ticketRepository.persist(ticket);
 
-        return toDto(ticket);
-    }
+                return toDto(ticket);
+        }
 
-    private TicketDto toDto(Ticket t) {
+        @Transactional
+        public TicketDto update(UpdateTicketDto dto, Long userId) {
 
-        TicketDto dto = new TicketDto();
+                Ticket ticket = ticketRepository.findByIdOptional(dto.id)
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
 
-        dto.id = t.id;
-        dto.ticketCode = t.ticketCode;
-        dto.title = t.title;
-        dto.description = t.description;
+                if (dto.title != null)
+                        ticket.title = dto.title;
 
-        dto.priority = (t.priority != null) ? t.priority.name : null;
-        dto.status = (t.status != null) ? t.status.name : null;
-        dto.category = (t.category != null) ? t.category.name : null;
+                if (dto.description != null)
+                        ticket.description = dto.description;
 
-        dto.createdBy = (t.createdBy != null) ? t.createdBy.email : null;
+                if (dto.categoryId != null) {
+                        TicketCategory category = categoryRepository.findByIdOptional(dto.categoryId)
+                                        .orElseThrow(() -> new NotFoundException("Category tidak ditemukan"));
 
-        return dto;
-    }
+                        ticket.category = category;
+                        ticket.categoryName = category.name;
+                }
 
-    public TicketDto findById(Long id) {
+                if (dto.priorityId != null) {
+                        TicketPriority priority = priorityRepository.findByIdOptional(dto.priorityId)
+                                        .orElseThrow(() -> new NotFoundException("Priority tidak ditemukan"));
 
-        Ticket ticket = ticketRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
+                        ticket.priority = priority;
+                        ticket.priorityName = priority.name;
+                }
 
-        return toDto(ticket);
-    }
+                if (dto.statusId != null) {
+                        TicketStatus status = statusRepository.findByIdOptional(dto.statusId)
+                                        .orElseThrow(() -> new NotFoundException("Status tidak ditemukan"));
 
-    public List<TicketDto> getAll() {
-        return ticketRepository.listAll().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+                        ticket.status = status;
+                        ticket.statusName = status.name;
+                }
 
-    public List<TicketDto> getByReporter(Long userId) {
-        return ticketRepository.list("createdBy.id", userId).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+                if (dto.assignedTo != null) {
+                        User user = userRepository.findByIdOptional(dto.assignedTo)
+                                        .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
 
+                        ticket.assignedTo = user;
+                        ticket.assignedName = user.fullName;
+                }
+
+                if (dto.assignedName != null) {
+                        ticket.assignedName = dto.assignedName;
+                }
+
+                if (dto.reportedId != null) {
+                        User reporter = userRepository.findByIdOptional(dto.reportedId)
+                                        .orElseThrow(() -> new NotFoundException("User reporter tidak ditemukan"));
+
+                        ticket.reportedBy = reporter;
+                        ticket.reportedName = reporter.fullName;
+                }
+
+                if (dto.reportedName != null) {
+                        ticket.reportedName = dto.reportedName;
+                }
+                return toDto(ticket);
+        }
+
+        public TicketDto findById(Long id) {
+
+                Ticket ticket = ticketRepository.findByIdOptional(id)
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
+
+                return toDto(ticket);
+        }
+
+        public List<TicketDto> getAll() {
+                return ticketRepository.listAll().stream()
+                                .map(this::toDto)
+                                .collect(Collectors.toList());
+        }
+
+        public List<TicketDto> getByReporter(Long userId) {
+
+                User user = userRepository.findByIdOptional(userId)
+                                .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
+
+                return ticketRepository.list("createdBy", user.fullName).stream()
+                                .map(this::toDto)
+                                .collect(Collectors.toList());
+        }
+
+        private TicketDto toDto(Ticket t) {
+
+                TicketDto dto = new TicketDto();
+
+                dto.id = t.id;
+                dto.ticketCode = t.ticketCode;
+                dto.title = t.title;
+                dto.description = t.description;
+
+                dto.priority = t.priorityName;
+                dto.status = t.statusName;
+                dto.category = t.categoryName;
+
+                dto.createdBy = t.createdBy;
+
+                dto.assignedTo = t.assignedTo != null ? t.assignedTo.id : null;
+                dto.assignedName = t.assignedName;
+
+                dto.reportedName = t.reportedName;
+                dto.reportedId = t.reportedBy != null ? t.reportedBy.id : null;
+
+                dto.createdAt = DateUtil.format(t.createdAt);
+                dto.updatedAt = DateUtil.format(t.updatedAt);
+
+                return dto;
+        }
 }

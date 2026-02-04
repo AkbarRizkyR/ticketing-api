@@ -1,6 +1,7 @@
 package io.github.akbarrizky.resource.tiket;
 
 import io.github.akbarrizky.dto.tiket.CreateTicketDto;
+import io.github.akbarrizky.dto.tiket.UpdateTicketDto;
 import io.github.akbarrizky.service.tiket.TicketService;
 import io.github.akbarrizky.util.ApiResponse;
 
@@ -42,6 +43,18 @@ public class TiketResource {
         return Response.ok(
                 ApiResponse.success(
                         ticketService.create(dto, userId)))
+                .build();
+    }
+
+    @POST
+    @Path("/update")
+    public Response update(@Valid UpdateTicketDto dto) {
+
+        Long userId = getUserIdFromJwt();
+
+        return Response.ok(
+                ApiResponse.success(
+                        ticketService.update(dto, userId)))
                 .build();
     }
 

@@ -12,4 +12,12 @@ public class TicketDto {
     public String category;
 
     public String createdBy;
+    public String createdAt;
+    public String updatedAt;
+
+    public Long assignedTo;
+    public Long reportedId;
+
+    public String assignedName;
+    public String reportedName;
 }
