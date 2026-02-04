@@ -1,13 +1,13 @@
 package io.github.akbarrizky.resource.tiket;
 
+import io.github.akbarrizky.dto.comment.CommentResponseDto;
+import io.github.akbarrizky.dto.comment.CreateCommentDto;
 import io.github.akbarrizky.dto.tiket.CreateTicketDto;
 import io.github.akbarrizky.dto.tiket.UpdateTicketDto;
 import io.github.akbarrizky.service.tiket.TicketService;
 import io.github.akbarrizky.util.ApiResponse;
-
 import io.quarkus.security.Authenticated;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -37,7 +37,6 @@ public class TiketResource {
     @Path("/create")
     public Response create(@Valid CreateTicketDto dto) {
 
-        // Ambil userId dari JWT dengan aman
         Long userId = getUserIdFromJwt();
 
         return Response.ok(
@@ -76,6 +75,24 @@ public class TiketResource {
         return Response.ok(
                 ApiResponse.success(
                         ticketService.getByReporter(userId)))
+                .build();
+    }
+
+    @POST
+    @Path("/comment")
+    public CommentResponseDto create(CreateCommentDto dto) {
+
+        Long userId = jwt.getClaim("userId");
+
+        return ticketService.createComment(dto, userId);
+    }
+
+    @GET
+    @Path("/ticket/{ticketId}")
+    public Response getByTicket(@PathParam("ticketId") Long ticketId) {
+        return Response.ok(
+                ApiResponse.success(
+                        ticketService.getByTicket(ticketId)))
                 .build();
     }
 

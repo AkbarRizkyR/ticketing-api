@@ -16,10 +16,11 @@ import java.util.Set;
 @ApplicationScoped
 public class AuthService {
 
-    public String generateToken(Long userId, String email, Set<String> roles) {
+    public String generateToken(Long userId, String email, String fullName, Set<String> roles) {
         return Jwt.issuer("ticketing-api")
                 .subject(userId.toString())
                 .claim("userId", userId)
+                .claim("fullName", fullName)
                 .upn(email)
                 .groups(roles)
                 .expiresIn(Duration.ofHours(2))
@@ -41,7 +42,7 @@ public class AuthService {
             throw new UnauthorizedException("Email atau password salah");
         }
 
-        return generateToken(user.id, user.email,
+        return generateToken(user.id, user.email, user.fullName,
                 user.roles.stream().map(r -> r.name).collect(java.util.stream.Collectors.toSet()));
     }
 }

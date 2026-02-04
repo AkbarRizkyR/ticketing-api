@@ -1,23 +1,24 @@
 package io.github.akbarrizky.service.tiket;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import io.github.akbarrizky.dto.comment.CommentResponseDto;
+import io.github.akbarrizky.dto.attachment.AttachmentDTO;
+import io.github.akbarrizky.dto.comment.CreateCommentDto;
 import io.github.akbarrizky.dto.tiket.CreateTicketDto;
 import io.github.akbarrizky.dto.tiket.TicketDto;
 import io.github.akbarrizky.dto.tiket.UpdateTicketDto;
-import io.github.akbarrizky.entity.tiket.Ticket;
-import io.github.akbarrizky.entity.tiket.TicketCategory;
-import io.github.akbarrizky.entity.tiket.TicketPriority;
-import io.github.akbarrizky.entity.tiket.TicketStatus;
+import io.github.akbarrizky.entity.tiket.*;
 import io.github.akbarrizky.entity.user.User;
 import io.github.akbarrizky.exception.NotFoundException;
-import io.github.akbarrizky.repository.tiket.TicketRepository;
+import io.github.akbarrizky.repository.tiket.*;
 import io.github.akbarrizky.repository.user.UserRepository;
+import io.github.akbarrizky.service.attachment.AttachmentService;
 import io.github.akbarrizky.util.DateUtil;
+
 import jakarta.enterprise.context.ApplicationScoped;
-import io.github.akbarrizky.repository.tiket.TicketCategoryRepository;
-import io.github.akbarrizky.repository.tiket.TicketPriorityRepository;
-import io.github.akbarrizky.repository.tiket.TicketStatusRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -38,6 +39,14 @@ public class TicketService {
 
         @Inject
         TicketCategoryRepository categoryRepository;
+
+        @Inject
+        TicketCommentRepository commentRepository;
+
+        // ===== YANG BARU =====
+        @Inject
+        AttachmentService attachmentService;
+        // =====================
 
         @Transactional
         public TicketDto create(CreateTicketDto dto, Long userId) {
@@ -121,10 +130,6 @@ public class TicketService {
                         ticket.assignedName = user.fullName;
                 }
 
-                if (dto.assignedName != null) {
-                        ticket.assignedName = dto.assignedName;
-                }
-
                 if (dto.reportedId != null) {
                         User reporter = userRepository.findByIdOptional(dto.reportedId)
                                         .orElseThrow(() -> new NotFoundException("User reporter tidak ditemukan"));
@@ -133,10 +138,55 @@ public class TicketService {
                         ticket.reportedName = reporter.fullName;
                 }
 
-                if (dto.reportedName != null) {
-                        ticket.reportedName = dto.reportedName;
-                }
                 return toDto(ticket);
+        }
+
+        @Transactional
+        public CommentResponseDto createComment(CreateCommentDto dto, Long userId) {
+
+                Ticket ticket = ticketRepository.findByIdOptional(dto.ticketId)
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
+
+                User user = userRepository.findByIdOptional(userId)
+                                .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
+
+                TicketComment comment = new TicketComment();
+
+                comment.ticket = ticket;
+                comment.user = user;
+                comment.comment = dto.comment;
+                comment.createdAt = LocalDateTime.now();
+
+                commentRepository.persist(comment);
+
+                return toCommentDto(comment);
+        }
+
+        public List<CommentResponseDto> getByTicket(Long ticketId) {
+                return commentRepository.findByTicketId(ticketId)
+                                .stream()
+                                .map(this::toCommentDto)
+                                .collect(Collectors.toList());
+        }
+
+        private CommentResponseDto toCommentDto(TicketComment c) {
+
+                CommentResponseDto dto = new CommentResponseDto();
+
+                dto.id = c.id;
+                dto.ticketId = c.ticket.id;
+                dto.userId = c.user.id;
+                dto.userFullName = c.user.fullName;
+                dto.comment = c.comment;
+
+                dto.createdAt = c.createdAt != null
+                                ? c.createdAt.toString()
+                                : null;
+
+                // Comment TIDAK perlu attachment
+                dto.attachments = List.of();
+
+                return dto;
         }
 
         public TicketDto findById(Long id) {
@@ -186,6 +236,12 @@ public class TicketService {
 
                 dto.createdAt = DateUtil.format(t.createdAt);
                 dto.updatedAt = DateUtil.format(t.updatedAt);
+
+                // ===== BAGIAN PENTING =====
+                List<AttachmentDTO> attachments = attachmentService.getByTicket(t.id);
+
+                dto.attachments = attachments;
+                // ===========================
 
                 return dto;
         }

@@ -1,5 +1,8 @@
 package io.github.akbarrizky.dto.tiket;
 
+import io.github.akbarrizky.dto.attachment.AttachmentDTO;
+import java.util.List;
+
 public class TicketDto {
 
     public Long id;
@@ -20,4 +23,6 @@ public class TicketDto {
 
     public String assignedName;
     public String reportedName;
+
+    public List<AttachmentDTO> attachments;
 }

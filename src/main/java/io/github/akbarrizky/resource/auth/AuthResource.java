@@ -39,6 +39,7 @@ public class AuthResource {
         String token = authService.generateToken(
                 user.id,
                 user.email,
+                user.fullName,
                 user.roles
                         .stream()
                         .map(r -> r.name)
