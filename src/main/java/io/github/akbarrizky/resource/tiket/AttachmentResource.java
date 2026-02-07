@@ -22,7 +22,12 @@ public class AttachmentResource {
     AttachmentService attachmentService;
 
     @Inject
+    io.minio.MinioClient minioClient;
+
+    @Inject
     JsonWebToken jwt;
+
+    private static final org.jboss.logging.Logger logger = org.jboss.logging.Logger.getLogger(AttachmentResource.class);
 
     public static class UploadForm {
         @RestForm("file")
@@ -55,7 +60,8 @@ public class AttachmentResource {
     @Path("/upload")
     public Response upload(@MultipartForm UploadForm form) throws Exception {
 
-        AttachmentDTO result = attachmentService.uploadWithoutTicket(
+        AttachmentDTO result = attachmentService.uploadFile(
+                null,
                 form.file,
                 form.fileName,
                 form.contentType,
@@ -80,6 +86,21 @@ public class AttachmentResource {
         return Response.ok(fileStream)
                 .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
                 .build();
+    }
+
+    @GET
+    @Path("/list-buckets")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getListBuckets() {
+        logger.info("List buckets...");
+        try {
+            java.util.List<io.minio.messages.Bucket> buckets = minioClient.listBuckets();
+            return Response.ok(
+                    buckets.stream().map(io.minio.messages.Bucket::name).collect(java.util.stream.Collectors.toList()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
     }
 
 }

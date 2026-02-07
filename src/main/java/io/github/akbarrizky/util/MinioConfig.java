@@ -2,6 +2,8 @@ package io.github.akbarrizky.util;
 
 import io.minio.MinioClient;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
@@ -16,6 +18,8 @@ public class MinioConfig {
     @ConfigProperty(name = "minio.secret-key")
     String secretKey;
 
+    @Produces
+    @Singleton
     public MinioClient minioClient() {
         return MinioClient.builder()
                 .endpoint(url)

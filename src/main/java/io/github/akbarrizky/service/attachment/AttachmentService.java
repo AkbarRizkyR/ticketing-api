@@ -3,13 +3,13 @@ package io.github.akbarrizky.service.attachment;
 import io.github.akbarrizky.dto.attachment.AttachmentDTO;
 import io.github.akbarrizky.entity.attachment.AttachmentEntity;
 import io.github.akbarrizky.repository.attachment.AttachmentRepository;
-import io.github.akbarrizky.util.MinioConfig;
+
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
-import io.minio.StatObjectArgs;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -28,12 +28,14 @@ public class AttachmentService {
     AttachmentRepository attachmentRepository;
 
     @Inject
-    MinioConfig minioConfig;
+    io.minio.MinioClient minioClient;
+
+    @Inject
+    AttachmentService self;
 
     @ConfigProperty(name = "minio.bucket")
     String bucketName;
 
-    @Transactional
     public AttachmentDTO uploadFile(
             Long ticketId,
             InputStream fileInputStream,
@@ -44,19 +46,21 @@ public class AttachmentService {
         String storedFileName = UUID.randomUUID() + "_" + fileName;
 
         // Ensure bucket exists
-        boolean found = minioConfig.minioClient().bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+        boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
         if (!found) {
-            minioConfig.minioClient().makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
         }
 
         // Upload to MinIO
-        try (InputStream stream = fileInputStream) {
-            minioConfig.minioClient().putObject(
+        // Read stream to byte array to get known size (fixes signature/creds issues)
+        byte[] contentBytes = fileInputStream.readAllBytes();
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(contentBytes)) {
+            minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketName)
                             .object(storedFileName)
-                            .stream(stream, -1, 10485760) // 10MB part size
-                            .contentType(contentType != null ? contentType : "application/octet-stream") // default
+                            .stream(bais, contentBytes.length, -1)
+                            // .contentType(contentType != null ? contentType : "application/octet-stream")
                             .build());
         }
 
@@ -64,7 +68,7 @@ public class AttachmentService {
         entity.setTicketId(ticketId);
         entity.setFileName(fileName);
         entity.setFileType(contentType);
-        entity.setFileSize(0L);
+        entity.setFileSize((long) contentBytes.length);
         entity.setFilePath(storedFileName); // Store object name as path
 
         // Use Subject for ID (safer)
@@ -82,21 +86,7 @@ public class AttachmentService {
             entity.setUploadedName(jwt.getName());
         }
 
-        attachmentRepository.persist(entity);
-
-        // Update file size after upload
-        try {
-            long size = minioConfig.minioClient().statObject(
-                    StatObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(storedFileName)
-                            .build())
-                    .size();
-            entity.setFileSize(size);
-        } catch (Exception e) {
-            e.printStackTrace(); // log stacktrace
-            throw new RuntimeException("Upload ke MinIO gagal: " + e.getMessage(), e);
-        }
+        self.persistAttachment(entity);
 
         return toDTO(entity);
     }
@@ -127,7 +117,7 @@ public class AttachmentService {
 
         for (AttachmentEntity entity : list) {
             try {
-                minioConfig.minioClient().removeObject(
+                minioClient.removeObject(
                         RemoveObjectArgs.builder()
                                 .bucket(bucketName)
                                 .object(entity.getFilePath())
@@ -139,7 +129,6 @@ public class AttachmentService {
         }
     }
 
-    @Transactional
     public AttachmentDTO uploadWithoutTicket(
             InputStream fileInputStream,
             String fileName,
@@ -149,13 +138,14 @@ public class AttachmentService {
         String storedFileName = UUID.randomUUID() + "_" + fileName;
 
         // Upload to MinIO
-        try (InputStream stream = fileInputStream) {
-            minioConfig.minioClient().putObject(
+        byte[] contentBytes = fileInputStream.readAllBytes();
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(contentBytes)) {
+            minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketName)
                             .object(storedFileName)
-                            .stream(stream, -1, 10485760)
-                            .contentType(contentType)
+                            .stream(bais, contentBytes.length, -1)
+                            // .contentType(contentType)
                             .build());
         }
 
@@ -164,7 +154,7 @@ public class AttachmentService {
         // TANPA ticketId
         entity.setFileName(fileName);
         entity.setFileType(contentType);
-        entity.setFileSize(0L);
+        entity.setFileSize((long) contentBytes.length);
         entity.setFilePath(storedFileName);
 
         // Use Subject for ID (safer)
@@ -182,20 +172,7 @@ public class AttachmentService {
             entity.setUploadedName(jwt.getName());
         }
 
-        attachmentRepository.persist(entity);
-
-        // Update file size after upload
-        try {
-            long size = minioConfig.minioClient().statObject(
-                    StatObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(storedFileName)
-                            .build())
-                    .size();
-            entity.setFileSize(size);
-        } catch (Exception e) {
-            // Ignore if stat fails
-        }
+        self.persistAttachment(entity);
 
         return toDTO(entity);
     }
@@ -209,7 +186,7 @@ public class AttachmentService {
             if (entity == null)
                 return null;
 
-            return minioConfig.minioClient().getObject(
+            return minioClient.getObject(
                     GetObjectArgs.builder()
                             .bucket(bucketName)
                             .object(entity.getFilePath())
@@ -218,6 +195,11 @@ public class AttachmentService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void persistAttachment(AttachmentEntity entity) {
+        attachmentRepository.persist(entity);
     }
 
 }
