@@ -1,0 +1,3 @@
+-- INSERT INTO menus (label, path, icon, menu_order) VALUES ('Dashboard', '/dashboard', 'dashboard', 1);
+-- INSERT INTO menus (label, path, icon, menu_order) VALUES ('Tiket', '/tiket', 'confirmation_number', 2);
+-- INSERT INTO menus (label, path, icon, menu_order) VALUES ('User/Profile', '/user/profile', 'person', 3);
