@@ -22,7 +22,7 @@ public class UserMasterService {
                 .collect(Collectors.toList());
     }
 
-    public UserMasterDto getById(Long id) {
+    public UserMasterDto getById(java.util.UUID id) {
         User user = userRepository.findById(id);
 
         if (user == null) {

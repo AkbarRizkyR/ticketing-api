@@ -2,7 +2,6 @@ package io.github.akbarrizky.service.user;
 
 import io.github.akbarrizky.dto.user.CreateUserDto;
 import io.github.akbarrizky.dto.user.UserDto;
-import io.github.akbarrizky.entity.user.Role;
 import io.github.akbarrizky.entity.user.User;
 import io.github.akbarrizky.exception.BadRequestException;
 import io.github.akbarrizky.exception.NotFoundException;
@@ -13,6 +12,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,12 +38,13 @@ public class UserService {
         user.passwordHash = PasswordUtil.hash(dto.password);
         user.isActive = true;
 
-        if (dto.roleIds != null && !dto.roleIds.isEmpty()) {
-            Set<Role> roles = dto.roleIds.stream()
-                    .map(id -> roleRepo.findByIdOptional(id)
-                            .orElseThrow(() -> new NotFoundException("Role not found: " + id)))
-                    .collect(Collectors.toSet());
-            user.roles = roles;
+        if (dto.roleIds != null) {
+            user.roles = new HashSet<>(); // Initialize the set before adding roles
+            for (Long roleId : dto.roleIds) {
+                io.github.akbarrizky.entity.user.Role role = roleRepo.findByIdOptional(roleId)
+                        .orElseThrow(() -> new NotFoundException("Role not found"));
+                user.roles.add(role);
+            }
         }
 
         userRepo.persist(user);
@@ -51,7 +52,7 @@ public class UserService {
         return toDto(user);
     }
 
-    public UserDto getById(Long id) {
+    public UserDto getById(java.util.UUID id) {
         User user = userRepo.findByIdOptional(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 

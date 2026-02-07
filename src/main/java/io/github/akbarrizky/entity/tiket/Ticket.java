@@ -7,13 +7,15 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "tickets")
 public class Ticket {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    public UUID id;
 
     @Column(name = "ticket_code", length = 20)
     public String ticketCode;

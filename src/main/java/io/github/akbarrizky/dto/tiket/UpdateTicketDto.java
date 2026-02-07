@@ -3,10 +3,12 @@ package io.github.akbarrizky.dto.tiket;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.UUID;
+
 public class UpdateTicketDto {
 
     @NotNull
-    public Long id;
+    public UUID id;
 
     @NotBlank(message = "Judul wajib diisi")
     public String title;
@@ -14,15 +16,15 @@ public class UpdateTicketDto {
     @NotBlank(message = "Deskripsi wajib diisi")
     public String description;
 
-    public Long categoryId;
+    public UUID categoryId;
 
-    public Long priorityId;
+    public UUID priorityId;
 
-    public Long statusId;
+    public UUID statusId;
 
-    public Long assignedTo;
+    public UUID assignedTo;
 
-    public Long reportedId;
+    public UUID reportedId;
 
     public String assignedName;
 

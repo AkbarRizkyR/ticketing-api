@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 public class CreateTicketDto {
 
     @NotBlank(message = "Judul wajib diisi")
@@ -15,17 +17,17 @@ public class CreateTicketDto {
     public String description;
 
     @NotNull(message = "Prioritas wajib diisi")
-    public Long priorityId;
+    public UUID priorityId;
 
     @NotNull(message = "Status wajib diisi")
-    public Long statusId;
+    public UUID statusId;
 
     @NotNull(message = "Kategori wajib diisi")
-    public Long categoryId;
+    public UUID categoryId;
 
-    public Long assignedTo;
+    public UUID assignedTo;
 
-    public Long reportedId;
+    public UUID reportedId;
 
     public String assignedName;
 

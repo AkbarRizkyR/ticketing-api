@@ -3,11 +3,12 @@ package io.github.akbarrizky.repository.user;
 import io.github.akbarrizky.entity.user.User;
 import java.util.List;
 import java.util.Optional;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.UUID;
 
 @ApplicationScoped
-public class UserRepository implements PanacheRepository<User> {
+public class UserRepository implements PanacheRepositoryBase<User, UUID> {
 
     public boolean existsByEmail(String email) {
         return find("email", email).firstResult() != null;

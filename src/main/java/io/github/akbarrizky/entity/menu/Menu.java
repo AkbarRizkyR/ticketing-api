@@ -7,8 +7,8 @@ import jakarta.persistence.*;
 public class Menu {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    public java.util.UUID id;
 
     @Column(nullable = false)
     public String label;

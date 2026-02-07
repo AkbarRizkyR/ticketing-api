@@ -7,13 +7,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "ticket_categories")
 public class TicketCategory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    public UUID id;
 
     @Column(length = 100)
     public String name;

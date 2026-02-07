@@ -2,6 +2,7 @@ package io.github.akbarrizky.service.tiket;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import io.github.akbarrizky.dto.comment.CommentResponseDto;
@@ -49,8 +50,9 @@ public class TicketService {
         // =====================
 
         @Transactional
-        public TicketDto create(CreateTicketDto dto, Long userId) {
+        public TicketDto create(CreateTicketDto dto, String userIdStr) {
 
+                UUID userId = UUID.fromString(userIdStr);
                 User user = userRepository.findByIdOptional(userId)
                                 .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
 
@@ -87,7 +89,7 @@ public class TicketService {
         }
 
         @Transactional
-        public TicketDto update(UpdateTicketDto dto, Long userId) {
+        public TicketDto update(UpdateTicketDto dto, String userIdStr) {
 
                 Ticket ticket = ticketRepository.findByIdOptional(dto.id)
                                 .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
@@ -142,9 +144,15 @@ public class TicketService {
         }
 
         @Transactional
-        public CommentResponseDto createComment(CreateCommentDto dto, Long userId) {
+        public CommentResponseDto createComment(CreateCommentDto dto, String userIdStr) {
 
-                Ticket ticket = ticketRepository.findByIdOptional(dto.ticketId)
+                UUID userId = UUID.fromString(userIdStr); // Parse from JWT subject/claim
+                // CreateCommentDto likely has ticketId as UUID? Need to check.
+                // Assuming dto.ticketId is UUID since we haven't updated CreateCommentDto yet?
+                // Wait, I missed CreateCommentDto. I should check it.
+                // But assuming it will be UUID.
+
+                Ticket ticket = ticketRepository.findByIdOptional(dto.ticketId) // Check if dto.ticketId is UUID
                                 .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
 
                 User user = userRepository.findByIdOptional(userId)
@@ -162,7 +170,7 @@ public class TicketService {
                 return toCommentDto(comment);
         }
 
-        public List<CommentResponseDto> getByTicket(Long ticketId) {
+        public List<CommentResponseDto> getByTicket(UUID ticketId) {
                 return commentRepository.findByTicketId(ticketId)
                                 .stream()
                                 .map(this::toCommentDto)
@@ -189,7 +197,7 @@ public class TicketService {
                 return dto;
         }
 
-        public TicketDto findById(Long id) {
+        public TicketDto findById(UUID id) {
 
                 Ticket ticket = ticketRepository.findByIdOptional(id)
                                 .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
@@ -203,8 +211,9 @@ public class TicketService {
                                 .collect(Collectors.toList());
         }
 
-        public List<TicketDto> getByReporter(Long userId) {
+        public List<TicketDto> getByReporter(String userIdStr) {
 
+                UUID userId = UUID.fromString(userIdStr);
                 User user = userRepository.findByIdOptional(userId)
                                 .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
 

@@ -28,7 +28,7 @@ public class UserResource {
     @GET
     @RolesAllowed("ADMIN")
     @Path("/{id}")
-    public UserDto get(@PathParam("id") Long id) {
+    public UserDto get(@PathParam("id") java.util.UUID id) {
         return userService.getById(id);
     }
 }

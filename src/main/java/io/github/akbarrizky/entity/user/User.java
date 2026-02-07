@@ -9,8 +9,8 @@ import java.util.Set;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    public java.util.UUID id;
 
     @Column(name = "full_name", nullable = false)
     public String fullName;

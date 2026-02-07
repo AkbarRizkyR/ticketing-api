@@ -3,9 +3,11 @@ package io.github.akbarrizky.dto.tiket;
 import io.github.akbarrizky.dto.attachment.AttachmentDTO;
 import java.util.List;
 
+import java.util.UUID;
+
 public class TicketDto {
 
-    public Long id;
+    public UUID id;
     public String ticketCode;
     public String title;
     public String description;
@@ -18,8 +20,8 @@ public class TicketDto {
     public String createdAt;
     public String updatedAt;
 
-    public Long assignedTo;
-    public Long reportedId;
+    public UUID assignedTo;
+    public UUID reportedId;
 
     public String assignedName;
     public String reportedName;

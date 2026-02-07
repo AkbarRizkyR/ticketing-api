@@ -13,13 +13,15 @@ import java.time.LocalDateTime;
 import io.github.akbarrizky.entity.user.User;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "ticket_comments")
 public class TicketComment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    public UUID id;
 
     @ManyToOne
     @JoinColumn(name = "ticket_id")

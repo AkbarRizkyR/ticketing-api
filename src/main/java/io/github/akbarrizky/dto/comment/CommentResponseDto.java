@@ -4,13 +4,15 @@ import io.github.akbarrizky.dto.attachment.AttachmentDTO;
 
 import java.util.List;
 
+import java.util.UUID;
+
 public class CommentResponseDto {
 
-    public Long id;
+    public UUID id;
 
-    public Long ticketId;
+    public UUID ticketId;
 
-    public Long userId;
+    public UUID userId;
 
     public String userFullName;
 

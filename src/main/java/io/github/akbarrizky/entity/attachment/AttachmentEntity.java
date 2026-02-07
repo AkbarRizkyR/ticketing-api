@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
 public class AttachmentEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private java.util.UUID id;
 
-    @Column(name = "ticket_id", nullable = false)
-    private Long ticketId;
+    @Column(name = "ticket_id", nullable = true)
+    private java.util.UUID ticketId;
 
     @Column(name = "file_name")
     private String fileName;
@@ -30,24 +30,24 @@ public class AttachmentEntity {
     private LocalDateTime uploadedAt = LocalDateTime.now();
 
     @Column(name = "uploaded_by")
-    private Long uploadedBy;
+    private java.util.UUID uploadedBy;
 
     @Column(name = "uploaded_name")
     private String uploadedName;
 
-    public Long getId() {
+    public java.util.UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(java.util.UUID id) {
         this.id = id;
     }
 
-    public Long getTicketId() {
+    public java.util.UUID getTicketId() {
         return ticketId;
     }
 
-    public void setTicketId(Long ticketId) {
+    public void setTicketId(java.util.UUID ticketId) {
         this.ticketId = ticketId;
     }
 
@@ -91,11 +91,11 @@ public class AttachmentEntity {
         this.uploadedAt = uploadedAt;
     }
 
-    public Long getUploadedBy() {
+    public java.util.UUID getUploadedBy() {
         return uploadedBy;
     }
 
-    public void setUploadedBy(Long uploadedBy) {
+    public void setUploadedBy(java.util.UUID uploadedBy) {
         this.uploadedBy = uploadedBy;
     }
 

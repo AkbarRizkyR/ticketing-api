@@ -37,13 +37,18 @@ public class AttachmentService {
     String bucketName;
 
     public AttachmentDTO uploadFile(
-            Long ticketId,
             InputStream fileInputStream,
             String fileName,
             String contentType,
             JsonWebToken jwt) throws Exception {
 
-        String storedFileName = UUID.randomUUID() + "_" + fileName;
+        // Generate safe stored filename (UUID + Extension)
+        String extension = "";
+        int i = fileName.lastIndexOf('.');
+        if (i > 0) {
+            extension = fileName.substring(i);
+        }
+        String storedFileName = UUID.randomUUID().toString() + extension;
 
         // Ensure bucket exists
         boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
@@ -52,7 +57,6 @@ public class AttachmentService {
         }
 
         // Upload to MinIO
-        // Read stream to byte array to get known size (fixes signature/creds issues)
         byte[] contentBytes = fileInputStream.readAllBytes();
         try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(contentBytes)) {
             minioClient.putObject(
@@ -60,25 +64,36 @@ public class AttachmentService {
                             .bucket(bucketName)
                             .object(storedFileName)
                             .stream(bais, contentBytes.length, -1)
-                            // .contentType(contentType != null ? contentType : "application/octet-stream")
+                            .contentType(contentType != null ? contentType : "application/octet-stream")
                             .build());
         }
 
         AttachmentEntity entity = new AttachmentEntity();
-        entity.setTicketId(ticketId);
+
+        // Ticket ID is null initially (Upload First flow)
         entity.setFileName(fileName);
         entity.setFileType(contentType);
         entity.setFileSize((long) contentBytes.length);
-        entity.setFilePath(storedFileName); // Store object name as path
+        entity.setFilePath(storedFileName);
 
-        // Use Subject for ID (safer)
+        // Auth Logic: Use Subject for ID (safer)
         if (jwt.getSubject() != null) {
-            entity.setUploadedBy(Long.parseLong(jwt.getSubject()));
-        } else if (jwt.getClaim("userId") != null) {
-            entity.setUploadedBy(Long.parseLong(jwt.getClaim("userId").toString()));
+            try {
+                entity.setUploadedBy(UUID.fromString(jwt.getSubject()));
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
         }
 
-        // Use fullName claim or fallback to getName() (email)
+        if (entity.getUploadedBy() == null && jwt.getClaim("userId") != null) {
+            try {
+                entity.setUploadedBy(UUID.fromString(jwt.getClaim("userId").toString()));
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
+        }
+
+        // Auth Logic: Use fullName claim or fallback to getName() (email/username)
         Object fullNameClaim = jwt.getClaim("fullName");
         if (fullNameClaim != null) {
             entity.setUploadedName(fullNameClaim.toString());
@@ -91,7 +106,7 @@ public class AttachmentService {
         return toDTO(entity);
     }
 
-    public List<AttachmentDTO> getByTicket(Long ticketId) {
+    public List<AttachmentDTO> getByTicket(UUID ticketId) {
         return attachmentRepository.findByTicketId(ticketId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -111,7 +126,7 @@ public class AttachmentService {
     }
 
     @Transactional
-    public void deleteByTicket(Long ticketId) {
+    public void deleteByTicket(UUID ticketId) {
 
         List<AttachmentEntity> list = attachmentRepository.findByTicketId(ticketId);
 
@@ -127,54 +142,6 @@ public class AttachmentService {
             }
             attachmentRepository.delete(entity);
         }
-    }
-
-    public AttachmentDTO uploadWithoutTicket(
-            InputStream fileInputStream,
-            String fileName,
-            String contentType,
-            JsonWebToken jwt) throws Exception {
-
-        String storedFileName = UUID.randomUUID() + "_" + fileName;
-
-        // Upload to MinIO
-        byte[] contentBytes = fileInputStream.readAllBytes();
-        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(contentBytes)) {
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(storedFileName)
-                            .stream(bais, contentBytes.length, -1)
-                            // .contentType(contentType)
-                            .build());
-        }
-
-        AttachmentEntity entity = new AttachmentEntity();
-
-        // TANPA ticketId
-        entity.setFileName(fileName);
-        entity.setFileType(contentType);
-        entity.setFileSize((long) contentBytes.length);
-        entity.setFilePath(storedFileName);
-
-        // Use Subject for ID (safer)
-        if (jwt.getSubject() != null) {
-            entity.setUploadedBy(Long.parseLong(jwt.getSubject()));
-        } else if (jwt.getClaim("userId") != null) {
-            entity.setUploadedBy(Long.parseLong(jwt.getClaim("userId").toString()));
-        }
-
-        // Use fullName claim or fallback to getName() (email)
-        Object fullNameClaim = jwt.getClaim("fullName");
-        if (fullNameClaim != null) {
-            entity.setUploadedName(fullNameClaim.toString());
-        } else {
-            entity.setUploadedName(jwt.getName());
-        }
-
-        self.persistAttachment(entity);
-
-        return toDTO(entity);
     }
 
     public InputStream getFileByName(String fileName) {
@@ -195,6 +162,28 @@ public class AttachmentService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public InputStream getFileById(UUID id) {
+        try {
+            AttachmentEntity entity = attachmentRepository.findById(id);
+
+            if (entity == null)
+                return null;
+
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(entity.getFilePath())
+                            .build());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public AttachmentEntity findById(UUID id) {
+        return attachmentRepository.findById(id);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

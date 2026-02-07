@@ -28,7 +28,7 @@ public class TiketResource {
 
     @GET
     @Path("/{id}")
-    public Response get(@PathParam("id") Long id) {
+    public Response get(@PathParam("id") java.util.UUID id) {
         return Response.ok(
                 ApiResponse.success(ticketService.findById(id))).build();
     }
@@ -37,7 +37,7 @@ public class TiketResource {
     @Path("/create")
     public Response create(@Valid CreateTicketDto dto) {
 
-        Long userId = getUserIdFromJwt();
+        String userId = getUserIdFromJwt();
 
         return Response.ok(
                 ApiResponse.success(
@@ -49,7 +49,7 @@ public class TiketResource {
     @Path("/update")
     public Response update(@Valid UpdateTicketDto dto) {
 
-        Long userId = getUserIdFromJwt();
+        String userId = getUserIdFromJwt();
 
         return Response.ok(
                 ApiResponse.success(
@@ -70,7 +70,7 @@ public class TiketResource {
     @Path("/my-tickets")
     public Response myTickets() {
 
-        Long userId = getUserIdFromJwt();
+        String userId = getUserIdFromJwt();
 
         return Response.ok(
                 ApiResponse.success(
@@ -82,14 +82,15 @@ public class TiketResource {
     @Path("/comment")
     public CommentResponseDto create(CreateCommentDto dto) {
 
-        Long userId = jwt.getClaim("userId");
+        Object claim = jwt.getClaim("userId");
+        String userId = claim != null ? claim.toString() : jwt.getSubject();
 
         return ticketService.createComment(dto, userId);
     }
 
     @GET
     @Path("/ticket/{ticketId}")
-    public Response getByTicket(@PathParam("ticketId") Long ticketId) {
+    public Response getByTicket(@PathParam("ticketId") java.util.UUID ticketId) {
         return Response.ok(
                 ApiResponse.success(
                         ticketService.getByTicket(ticketId)))
@@ -100,17 +101,16 @@ public class TiketResource {
     // HELPER METHOD
     // ==========================
 
-    private Long getUserIdFromJwt() {
+    private String getUserIdFromJwt() {
         Object claim = jwt.getClaim("userId");
 
         if (claim == null) {
+            // Check subject
+            if (jwt.getSubject() != null)
+                return jwt.getSubject();
             throw new WebApplicationException("UserId tidak ditemukan di token", 401);
         }
 
-        try {
-            return Long.parseLong(claim.toString());
-        } catch (Exception e) {
-            throw new WebApplicationException("Format userId di token tidak valid", 401);
-        }
+        return claim.toString();
     }
 }

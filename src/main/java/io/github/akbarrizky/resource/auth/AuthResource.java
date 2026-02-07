@@ -37,7 +37,7 @@ public class AuthResource {
         }
 
         String token = authService.generateToken(
-                user.id,
+                user.id.toString(),
                 user.email,
                 user.fullName,
                 user.roles

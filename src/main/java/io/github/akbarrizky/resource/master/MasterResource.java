@@ -64,7 +64,7 @@ public class MasterResource {
 
     @GET
     @Path("/users/{id}")
-    public Response userById(@PathParam("id") Long id) {
+    public Response userById(@PathParam("id") java.util.UUID id) {
         return Response.ok(
                 ApiResponse.success(userMasterService.getById(id))).build();
     }
