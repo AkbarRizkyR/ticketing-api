@@ -1,9 +1,10 @@
 package io.github.akbarrizky.repository.tiket;
 
-import io.github.akbarrizky.entity.tiket.TicketCategory;
+import io.github.akbarrizky.entity.tiket.TicketHistory;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.UUID;
 
 @ApplicationScoped
-public class TicketCategoryRepository implements PanacheRepositoryBase<TicketCategory, Long> {
+public class TicketHistoryRepository implements PanacheRepositoryBase<TicketHistory, UUID> {
 }

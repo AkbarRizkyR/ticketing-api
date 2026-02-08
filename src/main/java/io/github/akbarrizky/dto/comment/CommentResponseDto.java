@@ -20,5 +20,7 @@ public class CommentResponseDto {
 
     public String createdAt;
 
+    public String updatedAt;
+
     public List<AttachmentDTO> attachments;
 }

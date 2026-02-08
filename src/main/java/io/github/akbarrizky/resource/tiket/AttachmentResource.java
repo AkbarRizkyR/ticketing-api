@@ -13,6 +13,7 @@ import java.io.InputStream;
 import io.github.akbarrizky.service.attachment.AttachmentService;
 import io.quarkus.security.Authenticated;
 import io.github.akbarrizky.dto.attachment.AttachmentDTO;
+import io.github.akbarrizky.entity.attachment.AttachmentEntity;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -30,7 +31,8 @@ public class AttachmentResource {
     @Inject
     JsonWebToken jwt;
 
-    private static final org.jboss.logging.Logger logger = org.jboss.logging.Logger.getLogger(AttachmentResource.class);
+    // private static final org.jboss.logging.Logger logger =
+    // org.jboss.logging.Logger.getLogger(AttachmentResource.class);
 
     public static class UploadForm {
         @RestForm("files")
@@ -130,6 +132,7 @@ public class AttachmentResource {
 
     @GET
     @Path("/getDataUpload")
+    @Authenticated
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response getFile(@QueryParam("id_file") String idFile) {
         // Try to parse ID as UUID
@@ -137,7 +140,7 @@ public class AttachmentResource {
             java.util.UUID id = java.util.UUID.fromString(idFile);
 
             // Get Entity for Metadata (Filename, ContentType)
-            io.github.akbarrizky.entity.attachment.AttachmentEntity entity = attachmentService.findById(id);
+            AttachmentEntity entity = attachmentService.findById(id);
             if (entity == null) {
                 return Response.status(Response.Status.NOT_FOUND)
                         .entity("File tidak ditemukan")
@@ -170,19 +173,20 @@ public class AttachmentResource {
         }
     }
 
-    @GET
-    @Path("/list-buckets")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getListBuckets() {
-        logger.info("List buckets...");
-        try {
-            java.util.List<io.minio.messages.Bucket> buckets = minioClient.listBuckets();
-            return Response.ok(
-                    buckets.stream().map(io.minio.messages.Bucket::name).collect(java.util.stream.Collectors.toList()))
-                    .build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
-        }
-    }
+    // @GET
+    // @Path("/list-buckets")
+    // @Produces(MediaType.APPLICATION_JSON)
+    // public Response getListBuckets() {
+    // logger.info("List buckets...");
+    // try {
+    // java.util.List<io.minio.messages.Bucket> buckets = minioClient.listBuckets();
+    // return Response.ok(
+    // buckets.stream().map(io.minio.messages.Bucket::name).collect(java.util.stream.Collectors.toList()))
+    // .build();
+    // } catch (Exception e) {
+    // return
+    // Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+    // }
+    // }
 
 }

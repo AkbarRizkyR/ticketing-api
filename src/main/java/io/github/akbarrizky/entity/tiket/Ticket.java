@@ -17,7 +17,7 @@ public class Ticket {
     @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
 
-    @Column(name = "ticket_code", length = 20)
+    @Column(name = "ticket_code", length = 20, unique = true)
     public String ticketCode;
 
     @Column(length = 255)

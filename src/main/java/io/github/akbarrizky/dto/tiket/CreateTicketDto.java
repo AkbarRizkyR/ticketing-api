@@ -17,13 +17,13 @@ public class CreateTicketDto {
     public String description;
 
     @NotNull(message = "Prioritas wajib diisi")
-    public UUID priorityId;
+    public Long priorityId;
 
     @NotNull(message = "Status wajib diisi")
-    public UUID statusId;
+    public Long statusId;
 
     @NotNull(message = "Kategori wajib diisi")
-    public UUID categoryId;
+    public Long categoryId;
 
     public UUID assignedTo;
 
@@ -32,4 +32,6 @@ public class CreateTicketDto {
     public String assignedName;
 
     public String reportedName;
+
+    public java.util.List<String> attachmentIds;
 }

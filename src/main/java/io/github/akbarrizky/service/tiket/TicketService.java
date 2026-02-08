@@ -17,8 +17,11 @@ import io.github.akbarrizky.exception.NotFoundException;
 import io.github.akbarrizky.repository.tiket.*;
 import io.github.akbarrizky.repository.user.UserRepository;
 import io.github.akbarrizky.service.attachment.AttachmentService;
+import io.github.akbarrizky.entity.attachment.AttachmentEntity;
 import io.github.akbarrizky.util.DateUtil;
-
+import io.github.akbarrizky.util.PaginationResponse;
+import io.github.akbarrizky.dto.tiket.TicketHistoryDto;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -80,10 +83,59 @@ public class TicketService {
                 ticket.categoryName = category.name;
 
                 ticket.createdBy = user.fullName;
-
                 ticket.ticketCode = "TCK-" + System.currentTimeMillis();
 
+                // HANDLE ASSIGNED TO
+                if (dto.assignedTo != null) {
+                        try {
+                                User assignedUser = userRepository.findByIdOptional(dto.assignedTo).orElse(null);
+                                if (assignedUser != null) {
+                                        ticket.assignedTo = assignedUser;
+                                        ticket.assignedName = assignedUser.fullName;
+                                }
+                        } catch (Exception e) {
+                                // ignore
+                        }
+                } else if (dto.assignedName != null) {
+                        ticket.assignedName = dto.assignedName;
+                }
+
+                // HANDLE REPORTED BY
+                if (dto.reportedId != null) {
+                        try {
+                                User reportedUser = userRepository.findByIdOptional(dto.reportedId).orElse(null);
+                                if (reportedUser != null) {
+                                        ticket.reportedBy = reportedUser;
+                                        ticket.reportedName = reportedUser.fullName;
+                                }
+                        } catch (Exception e) {
+                                // ignore
+                        }
+
+                } else if (dto.reportedName != null) {
+                        ticket.reportedName = dto.reportedName;
+                }
+
                 ticketRepository.persist(ticket);
+
+                // HANDLE ATTACHMENTS
+                if (dto.attachmentIds != null && !dto.attachmentIds.isEmpty()) {
+                        for (String attachIdStr : dto.attachmentIds) {
+                                try {
+                                        UUID attachId = UUID.fromString(attachIdStr);
+                                        AttachmentEntity attachment = attachmentService.findById(attachId);
+                                        if (attachment != null) {
+                                                attachment.setTicketId(ticket.id);
+                                                attachmentService.persistAttachment(attachment);
+                                        }
+                                } catch (Exception e) {
+                                        // ignore invalid IDs
+                                }
+                        }
+                }
+
+                // LOG HISTORY
+                logHistory(ticket, "CREATED", "Ticket Created", "-", "-", user.fullName);
 
                 return toDto(ticket);
         }
@@ -91,45 +143,78 @@ public class TicketService {
         @Transactional
         public TicketDto update(UpdateTicketDto dto, String userIdStr) {
 
+                UUID userId = UUID.fromString(userIdStr);
+                User userModifier = userRepository.findByIdOptional(userId)
+                                .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
+
                 Ticket ticket = ticketRepository.findByIdOptional(dto.id)
                                 .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
 
-                if (dto.title != null)
+                if (dto.title != null && !dto.title.equals(ticket.title)) {
+                        logHistory(ticket, "UPDATED", "Title", ticket.title, dto.title, userModifier.fullName);
                         ticket.title = dto.title;
+                }
 
-                if (dto.description != null)
+                if (dto.description != null && !dto.description.equals(ticket.description)) {
+                        logHistory(ticket, "UPDATED", "Description", ticket.description, dto.description,
+                                        userModifier.fullName);
                         ticket.description = dto.description;
+                }
 
                 if (dto.categoryId != null) {
                         TicketCategory category = categoryRepository.findByIdOptional(dto.categoryId)
                                         .orElseThrow(() -> new NotFoundException("Category tidak ditemukan"));
 
-                        ticket.category = category;
-                        ticket.categoryName = category.name;
+                        if (ticket.category == null || !ticket.category.id.equals(category.id)) {
+                                logHistory(ticket, "UPDATED", "Category",
+                                                ticket.category != null ? ticket.category.name : "-",
+                                                category.name, userModifier.fullName);
+
+                                ticket.category = category;
+                                ticket.categoryName = category.name;
+                        }
                 }
 
                 if (dto.priorityId != null) {
                         TicketPriority priority = priorityRepository.findByIdOptional(dto.priorityId)
                                         .orElseThrow(() -> new NotFoundException("Priority tidak ditemukan"));
 
-                        ticket.priority = priority;
-                        ticket.priorityName = priority.name;
+                        if (ticket.priority == null || !ticket.priority.id.equals(priority.id)) {
+                                logHistory(ticket, "UPDATED", "Priority",
+                                                ticket.priority != null ? ticket.priority.name : "-",
+                                                priority.name, userModifier.fullName);
+
+                                ticket.priority = priority;
+                                ticket.priorityName = priority.name;
+                        }
                 }
 
                 if (dto.statusId != null) {
                         TicketStatus status = statusRepository.findByIdOptional(dto.statusId)
                                         .orElseThrow(() -> new NotFoundException("Status tidak ditemukan"));
 
-                        ticket.status = status;
-                        ticket.statusName = status.name;
+                        if (ticket.status == null || !ticket.status.id.equals(status.id)) {
+                                logHistory(ticket, "UPDATED", "Status",
+                                                ticket.status != null ? ticket.status.name : "-",
+                                                status.name, userModifier.fullName);
+
+                                ticket.status = status;
+                                ticket.statusName = status.name;
+                        }
                 }
 
                 if (dto.assignedTo != null) {
                         User user = userRepository.findByIdOptional(dto.assignedTo)
                                         .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
 
-                        ticket.assignedTo = user;
-                        ticket.assignedName = user.fullName;
+                        if (ticket.assignedTo == null || !ticket.assignedTo.id.equals(user.id)) {
+                                logHistory(ticket, "UPDATED", "Assigned To",
+                                                ticket.assignedName != null ? ticket.assignedName : "-",
+                                                user.fullName, userModifier.fullName);
+
+                                ticket.assignedTo = user;
+                                ticket.assignedName = user.fullName;
+                        }
                 }
 
                 if (dto.reportedId != null) {
@@ -140,20 +225,106 @@ public class TicketService {
                         ticket.reportedName = reporter.fullName;
                 }
 
+                // HANDLE ATTACHMENTS
+                if (dto.attachmentIds != null && !dto.attachmentIds.isEmpty()) {
+                        for (String attachIdStr : dto.attachmentIds) {
+                                try {
+                                        UUID attachId = UUID.fromString(attachIdStr);
+                                        AttachmentEntity attachment = attachmentService.findById(attachId);
+                                        if (attachment != null) {
+                                                attachment.setTicketId(ticket.id);
+                                                attachmentService.persistAttachment(attachment);
+                                        }
+                                } catch (Exception e) {
+                                        // ignore invalid IDs
+                                }
+                        }
+                        logHistory(ticket, "UPDATED", "Attachments", "-",
+                                        "Added " + dto.attachmentIds.size() + " files", userModifier.fullName);
+                }
+
                 return toDto(ticket);
+        }
+
+        // ... existing methods ...
+
+        @Inject
+        TicketHistoryRepository historyRepository;
+
+        private void logHistory(Ticket ticket, String action, String field, String oldValue, String newValue,
+                        String changedBy) {
+                TicketHistory history = new TicketHistory();
+                history.ticket = ticket;
+                history.action = action;
+                history.field = field;
+                history.oldValue = oldValue;
+                history.newValue = newValue;
+                history.changedBy = changedBy;
+                historyRepository.persist(history);
+        }
+
+        public io.github.akbarrizky.util.PaginationResponse<io.github.akbarrizky.dto.tiket.TicketHistoryDto> getHistory(
+                        String ticketCode, int page, int size) {
+                Ticket ticket = ticketRepository.find("ticketCode", ticketCode).firstResultOptional()
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan: " + ticketCode));
+
+                io.quarkus.hibernate.orm.panache.PanacheQuery<TicketHistory> query = historyRepository.find(
+                                "ticket.ticketCode", io.quarkus.panache.common.Sort.descending("changedAt"),
+                                ticketCode);
+
+                List<io.github.akbarrizky.dto.tiket.TicketHistoryDto> items = query
+                                .page(io.quarkus.panache.common.Page.of(page, size))
+                                .list().stream().map(h -> {
+                                        io.github.akbarrizky.dto.tiket.TicketHistoryDto dto = new io.github.akbarrizky.dto.tiket.TicketHistoryDto();
+                                        dto.id = h.id;
+                                        dto.action = h.action;
+                                        dto.field = h.field;
+                                        dto.oldValue = h.oldValue;
+                                        dto.newValue = h.newValue;
+                                        dto.changedBy = h.changedBy;
+                                        dto.changedAt = DateUtil.format(h.changedAt);
+                                        return dto;
+                                }).collect(Collectors.toList());
+
+                long totalItems = query.count();
+                int totalPages = (int) Math.ceil((double) totalItems / size);
+
+                return new PaginationResponse<>(items, page, size, totalItems, totalPages);
+        }
+
+        public PaginationResponse<TicketHistoryDto> getAllHistory(
+                        int page, int size) {
+                PanacheQuery<TicketHistory> query = historyRepository
+                                .findAll(io.quarkus.panache.common.Sort.descending("changedAt"));
+
+                List<TicketHistoryDto> items = query
+                                .page(io.quarkus.panache.common.Page.of(page, size))
+                                .list().stream().map(h -> {
+                                        TicketHistoryDto dto = new TicketHistoryDto();
+                                        dto.id = h.id;
+                                        dto.ticketCode = h.ticket.ticketCode;
+                                        dto.action = h.action;
+                                        dto.field = h.field;
+                                        dto.oldValue = h.oldValue;
+                                        dto.newValue = h.newValue;
+                                        dto.changedBy = h.changedBy;
+                                        dto.changedAt = DateUtil.format(h.changedAt);
+                                        return dto;
+                                }).collect(Collectors.toList());
+
+                long totalItems = query.count();
+                int totalPages = (int) Math.ceil((double) totalItems / size);
+
+                return new io.github.akbarrizky.util.PaginationResponse<>(items, page, size, totalItems, totalPages);
         }
 
         @Transactional
         public CommentResponseDto createComment(CreateCommentDto dto, String userIdStr) {
 
                 UUID userId = UUID.fromString(userIdStr); // Parse from JWT subject/claim
-                // CreateCommentDto likely has ticketId as UUID? Need to check.
-                // Assuming dto.ticketId is UUID since we haven't updated CreateCommentDto yet?
-                // Wait, I missed CreateCommentDto. I should check it.
-                // But assuming it will be UUID.
 
-                Ticket ticket = ticketRepository.findByIdOptional(dto.ticketId) // Check if dto.ticketId is UUID
-                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan"));
+                Ticket ticket = ticketRepository.find("ticketCode", dto.ticketCode).firstResultOptional()
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan: " + dto.ticketCode));
 
                 User user = userRepository.findByIdOptional(userId)
                                 .orElseThrow(() -> new NotFoundException("User tidak ditemukan"));
@@ -167,11 +338,32 @@ public class TicketService {
 
                 commentRepository.persist(comment);
 
+                if (dto.attachmentIds != null && !dto.attachmentIds.isEmpty()) {
+                        List<AttachmentEntity> attachments = new java.util.ArrayList<>();
+                        for (String attachmentIdStr : dto.attachmentIds) {
+                                try {
+                                        UUID attachmentId = UUID.fromString(attachmentIdStr);
+                                        AttachmentEntity attachment = attachmentService
+                                                        .findById(attachmentId);
+                                        if (attachment != null) {
+                                                attachments.add(attachment);
+                                        }
+                                } catch (Exception e) {
+                                        // log error
+                                }
+                        }
+                        comment.attachments = attachments;
+                        commentRepository.persist(comment);
+                }
+
                 return toCommentDto(comment);
         }
 
-        public List<CommentResponseDto> getByTicket(UUID ticketId) {
-                return commentRepository.findByTicketId(ticketId)
+        public List<CommentResponseDto> getByTicket(String ticketCode) {
+                Ticket ticket = ticketRepository.find("ticketCode", ticketCode).firstResultOptional()
+                                .orElseThrow(() -> new NotFoundException("Ticket tidak ditemukan: " + ticketCode));
+
+                return commentRepository.findByTicketId(ticket.id)
                                 .stream()
                                 .map(this::toCommentDto)
                                 .collect(Collectors.toList());
@@ -191,8 +383,18 @@ public class TicketService {
                                 ? c.createdAt.toString()
                                 : null;
 
-                // Comment TIDAK perlu attachment
-                dto.attachments = List.of();
+                dto.updatedAt = c.updatedAt != null
+                                ? c.updatedAt.toString()
+                                : null;
+
+                // Populate attachments
+                if (c.attachments != null) {
+                        dto.attachments = c.attachments.stream()
+                                        .map(att -> attachmentService.toDTO(att))
+                                        .collect(Collectors.toList());
+                } else {
+                        dto.attachments = java.util.Collections.emptyList();
+                }
 
                 return dto;
         }

@@ -16,11 +16,11 @@ public class UpdateTicketDto {
     @NotBlank(message = "Deskripsi wajib diisi")
     public String description;
 
-    public UUID categoryId;
+    public Long categoryId;
 
-    public UUID priorityId;
+    public Long priorityId;
 
-    public UUID statusId;
+    public Long statusId;
 
     public UUID assignedTo;
 
@@ -29,4 +29,6 @@ public class UpdateTicketDto {
     public String assignedName;
 
     public String reportedName;
+
+    public java.util.List<String> attachmentIds;
 }

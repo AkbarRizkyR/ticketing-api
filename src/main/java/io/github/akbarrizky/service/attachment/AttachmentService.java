@@ -112,7 +112,7 @@ public class AttachmentService {
                 .collect(Collectors.toList());
     }
 
-    private AttachmentDTO toDTO(AttachmentEntity e) {
+    public AttachmentDTO toDTO(AttachmentEntity e) {
         AttachmentDTO dto = new AttachmentDTO();
         dto.id = e.getId();
         dto.ticketId = e.getTicketId();

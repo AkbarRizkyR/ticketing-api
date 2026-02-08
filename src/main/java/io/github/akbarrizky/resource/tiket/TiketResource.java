@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.DefaultValue;
 
 @Path("/ticket")
 @Produces(MediaType.APPLICATION_JSON)
@@ -89,11 +91,34 @@ public class TiketResource {
     }
 
     @GET
-    @Path("/ticket/{ticketId}")
-    public Response getByTicket(@PathParam("ticketId") java.util.UUID ticketId) {
+    @Path("/{ticketCode}")
+    public Response getByTicket(@PathParam("ticketCode") String ticketCode) {
         return Response.ok(
                 ApiResponse.success(
-                        ticketService.getByTicket(ticketId)))
+                        ticketService.getByTicket(ticketCode)))
+                .build();
+    }
+
+    @GET
+    @Path("/history")
+    public Response getAllHistory(
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        return Response.ok(
+                ApiResponse.success(
+                        ticketService.getAllHistory(page, size)))
+                .build();
+    }
+
+    @GET
+    @Path("/{ticketCode}/history")
+    public Response getHistory(
+            @PathParam("ticketCode") String ticketCode,
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        return Response.ok(
+                ApiResponse.success(
+                        ticketService.getHistory(ticketCode, page, size)))
                 .build();
     }
 
