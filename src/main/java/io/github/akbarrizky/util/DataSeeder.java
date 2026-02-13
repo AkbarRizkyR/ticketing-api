@@ -43,6 +43,15 @@ public class DataSeeder {
     io.github.akbarrizky.repository.menu.MenuRepository menuRepository;
 
     @Inject
+    io.github.akbarrizky.repository.tiket.TicketRepository ticketRepository;
+
+    @Inject
+    io.github.akbarrizky.repository.tiket.TicketHistoryRepository historyRepository;
+
+    @Inject
+    io.github.akbarrizky.repository.tiket.TicketCommentRepository commentRepository;
+
+    @Inject
     jakarta.persistence.EntityManager em;
 
     @Transactional
@@ -71,6 +80,11 @@ public class DataSeeder {
 
         // 5. Enrich User Roles (Add full_name column)
         enrichUserRoles();
+
+        // 6. Seed Tickets (Sample Data)
+        if (ticketRepository.count() == 0) {
+            seedTickets();
+        }
     }
 
     private void enrichUserRoles() {
@@ -208,5 +222,94 @@ public class DataSeeder {
         m.icon = icon;
         m.order = order;
         menuRepository.persist(m);
+    }
+
+    private void seedTickets() {
+        User admin = userRepository.findByEmail("admindev@gmail.com").orElseThrow();
+        User dev1 = userRepository.findByEmail("dev1@gmail.com").orElseThrow();
+        User support1 = userRepository.findByEmail("support1@gmail.com").orElseThrow();
+
+        TicketPriority high = priorityRepository.find("name", "HIGH").firstResult();
+        TicketPriority medium = priorityRepository.find("name", "MEDIUM").firstResult();
+        TicketStatus open = statusRepository.find("name", "OPEN").firstResult();
+        TicketStatus inProgress = statusRepository.find("name", "IN PROGRESS").firstResult();
+        TicketCategory bug = categoryRepository.find("name", "Bug Report").firstResult();
+        TicketCategory feature = categoryRepository.find("name", "Permintaan Fitur Baru").firstResult();
+
+        // Ticket 1: Bug Report
+        io.github.akbarrizky.entity.tiket.Ticket t1 = createTicket(
+                "Login Error on Safari",
+                "Users cannot login when using Safari browser version 15+",
+                high, open, bug, admin, null);
+        seedHistory(t1, admin, "CREATED");
+        seedComments(t1, admin, "I suspect this is a CORS issue.");
+
+        // Ticket 2: Feature Request
+        io.github.akbarrizky.entity.tiket.Ticket t2 = createTicket(
+                "Dark Mode Support",
+                "Add dark mode toggle in settings",
+                medium, inProgress, feature, support1, dev1);
+        seedHistory(t2, support1, "CREATED");
+        seedHistory(t2, dev1, "UPDATED", "Status", "OPEN", "IN PROGRESS");
+        seedComments(t2, dev1, "Starting work on this now.");
+
+        LOG.info("Seeded Tickets, History, and Comments.");
+    }
+
+    private io.github.akbarrizky.entity.tiket.Ticket createTicket(
+            String title, String description,
+            TicketPriority priority, TicketStatus status, TicketCategory category,
+            User createdBy, User assignedTo) {
+
+        io.github.akbarrizky.entity.tiket.Ticket t = new io.github.akbarrizky.entity.tiket.Ticket();
+        t.ticketCode = "TCK-" + System.currentTimeMillis() + "-" + (int) (Math.random() * 1000);
+        t.title = title;
+        t.description = description;
+
+        t.priority = priority;
+        t.priorityName = priority.name;
+
+        t.status = status;
+        t.statusName = status.name;
+
+        t.category = category;
+        t.categoryName = category.name;
+
+        t.createdBy = createdBy.fullName;
+        t.reportedBy = createdBy;
+        t.reportedName = createdBy.fullName;
+
+        if (assignedTo != null) {
+            t.assignedTo = assignedTo;
+            t.assignedName = assignedTo.fullName;
+        }
+
+        ticketRepository.persist(t);
+        return t;
+    }
+
+    private void seedHistory(io.github.akbarrizky.entity.tiket.Ticket ticket, User user, String action) {
+        seedHistory(ticket, user, action, null, null, null);
+    }
+
+    private void seedHistory(io.github.akbarrizky.entity.tiket.Ticket ticket, User user, String action, String field,
+            String oldValue, String newValue) {
+        io.github.akbarrizky.entity.tiket.TicketHistory h = new io.github.akbarrizky.entity.tiket.TicketHistory();
+        h.ticket = ticket;
+        h.action = action;
+        h.changedBy = user.fullName;
+        h.field = field;
+        h.oldValue = oldValue;
+        h.newValue = newValue;
+        historyRepository.persist(h);
+    }
+
+    private void seedComments(io.github.akbarrizky.entity.tiket.Ticket ticket, User user, String message) {
+        io.github.akbarrizky.entity.tiket.TicketComment c = new io.github.akbarrizky.entity.tiket.TicketComment();
+        c.ticket = ticket;
+        c.user = user;
+        c.comment = message;
+        // c.createdAt is auto-handled
+        commentRepository.persist(c);
     }
 }

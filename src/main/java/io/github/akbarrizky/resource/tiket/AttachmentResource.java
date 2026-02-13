@@ -31,8 +31,7 @@ public class AttachmentResource {
     @Inject
     JsonWebToken jwt;
 
-    // private static final org.jboss.logging.Logger logger =
-    // org.jboss.logging.Logger.getLogger(AttachmentResource.class);
+    private static final org.jboss.logging.Logger logger = org.jboss.logging.Logger.getLogger(AttachmentResource.class);
 
     public static class UploadForm {
         @RestForm("files")
@@ -173,20 +172,19 @@ public class AttachmentResource {
         }
     }
 
-    // @GET
-    // @Path("/list-buckets")
-    // @Produces(MediaType.APPLICATION_JSON)
-    // public Response getListBuckets() {
-    // logger.info("List buckets...");
-    // try {
-    // java.util.List<io.minio.messages.Bucket> buckets = minioClient.listBuckets();
-    // return Response.ok(
-    // buckets.stream().map(io.minio.messages.Bucket::name).collect(java.util.stream.Collectors.toList()))
-    // .build();
-    // } catch (Exception e) {
-    // return
-    // Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
-    // }
-    // }
+    @GET
+    @Path("/list-buckets")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getListBuckets() {
+        logger.info("List buckets...");
+        try {
+            java.util.List<io.minio.messages.Bucket> buckets = minioClient.listBuckets();
+            return Response.ok(
+                    buckets.stream().map(io.minio.messages.Bucket::name).collect(java.util.stream.Collectors.toList()))
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
+    }
 
 }
