@@ -13,6 +13,10 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import io.quarkus.security.Authenticated;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/auth")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -27,7 +31,17 @@ public class AuthResource {
 
     @POST
     @Path("/login")
-    public Response login(@Valid LoginDto dto) {
+    public Response login(@Valid LoginDto dto, @Context HttpHeaders headers) {
+        // In JAX-RS/Quarkus, getting remote IP can be tricky without specific reactive
+        // extensions or Undertow.
+        // For now, let's try getting it from headers like X-Forwarded-For or use a
+        // placeholder if complex.
+        // Or if we want to extract it safely without new deps:
+        String ipAddress = headers.getHeaderString("X-Forwarded-For");
+        if (ipAddress == null) {
+            ipAddress = "unknown";
+        }
+        String userAgent = headers.getHeaderString("User-Agent");
 
         User user = userRepository.findByEmail(dto.email)
                 .orElseThrow(() -> new UnauthorizedException("Email atau password salah"));
@@ -36,15 +50,29 @@ public class AuthResource {
             throw new UnauthorizedException("Email atau password salah");
         }
 
-        String token = authService.generateToken(
-                user.id.toString(),
-                user.email,
-                user.fullName,
-                user.roles
-                        .stream()
-                        .map(r -> r.name)
-                        .collect(java.util.stream.Collectors.toSet()));
+        // Delegating session creation to service
+        String token = authService.login(dto, ipAddress, userAgent);
 
         return Response.ok(ApiResponse.success(token)).build();
     }
+
+    @POST
+    @Path("/logout")
+    @Authenticated
+    public Response logout(@Context SecurityContext ctx) {
+        String sessionId = null;
+        try {
+            Object claim = jwt.getClaim("sessionId");
+            if (claim != null) {
+                sessionId = claim.toString();
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        authService.logout(sessionId);
+        return Response.ok(ApiResponse.success("Logout berhasil")).build();
+    }
+
+    @Inject
+    org.eclipse.microprofile.jwt.JsonWebToken jwt;
 }

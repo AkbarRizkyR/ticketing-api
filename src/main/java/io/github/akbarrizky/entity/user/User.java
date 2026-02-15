@@ -30,4 +30,7 @@ public class User {
 
     @Column(name = "created_at")
     public Instant createdAt = Instant.now();
+
+    @Column(name = "token_version")
+    public Long tokenVersion = 0L;
 }
