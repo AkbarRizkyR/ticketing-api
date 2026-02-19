@@ -116,6 +116,12 @@ public class TicketService {
                         ticket.reportedName = dto.reportedName;
                 }
 
+                // HANDLE CASE OWNER
+                ticket.caseOwner = dto.caseOwner;
+
+                // HANDLE CASE COMPLAINT
+                ticket.caseComplaint = dto.caseComplaint;
+
                 ticketRepository.persist(ticket);
 
                 // HANDLE ATTACHMENTS
@@ -223,6 +229,22 @@ public class TicketService {
 
                         ticket.reportedBy = reporter;
                         ticket.reportedName = reporter.fullName;
+                }
+
+                // HANDLE CASE OWNER
+                if (dto.caseOwner != null && !dto.caseOwner.equals(ticket.caseOwner)) {
+                        logHistory(ticket, "UPDATED", "Case Owner",
+                                        ticket.caseOwner != null ? ticket.caseOwner : "-",
+                                        dto.caseOwner, userModifier.fullName);
+                        ticket.caseOwner = dto.caseOwner;
+                }
+
+                // HANDLE CASE COMPLAINT
+                if (dto.caseComplaint != null && !dto.caseComplaint.equals(ticket.caseComplaint)) {
+                        logHistory(ticket, "UPDATED", "Case Complaint",
+                                        ticket.caseComplaint != null ? ticket.caseComplaint : "-",
+                                        dto.caseComplaint, userModifier.fullName);
+                        ticket.caseComplaint = dto.caseComplaint;
                 }
 
                 // HANDLE ATTACHMENTS
@@ -444,6 +466,9 @@ public class TicketService {
 
                 dto.reportedName = t.reportedName;
                 dto.reportedId = t.reportedBy != null ? t.reportedBy.id : null;
+
+                dto.caseOwner = t.caseOwner;
+                dto.caseComplaint = t.caseComplaint;
 
                 dto.createdAt = DateUtil.format(t.createdAt);
                 dto.updatedAt = DateUtil.format(t.updatedAt);

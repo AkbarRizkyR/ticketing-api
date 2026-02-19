@@ -33,5 +33,9 @@ public class CreateTicketDto {
 
     public String reportedName;
 
+    public String caseOwner;
+
+    public String caseComplaint;
+
     public java.util.List<String> attachmentIds;
 }

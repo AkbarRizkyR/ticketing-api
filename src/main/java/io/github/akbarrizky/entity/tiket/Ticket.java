@@ -75,4 +75,10 @@ public class Ticket {
     @Column(name = "reported_name")
     public String reportedName;
 
+    @Column(name = "case_owner")
+    public String caseOwner;
+
+    @Column(name = "case_complaint")
+    public String caseComplaint;
+
 }

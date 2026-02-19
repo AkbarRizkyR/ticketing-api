@@ -26,5 +26,8 @@ public class TicketDto {
     public String assignedName;
     public String reportedName;
 
+    public String caseOwner;
+    public String caseComplaint;
+
     public List<AttachmentDTO> attachments;
 }
